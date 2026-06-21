@@ -10,7 +10,9 @@ class HeroSection extends StatelessComponent {
       div(classes: 'hero-container', [
         div(classes: 'hero-content', [
           h1(classes: 'hero-title', [
-            Component.text('Architecting Next-Gen Software Solutions'),
+            Component.text('Architecting Software that is '),
+            span(classes: 'typed-text', []),
+            span(classes: 'typed-cursor', [Component.text('|')]),
           ]),
           p(classes: 'hero-subtitle', [
             Component.text(

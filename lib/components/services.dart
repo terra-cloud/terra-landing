@@ -169,6 +169,52 @@ class ServicesSection extends StatelessComponent {
               ]),
             ]),
           ]),
+
+          // Service Card 4: AI Development & Integration
+          div(classes: 'service-card reveal', [
+            div(classes: 'service-icon-wrapper', [
+              i([], classes: 'service-icon', attributes: {'data-lucide': 'brain'}),
+            ]),
+            h3(classes: 'service-card-title', [Component.text('AI & Machine Learning')]),
+            p(classes: 'service-card-desc', [
+              Component.text(
+                'Intelligent agent orchestration, LLM integration, custom RAG (Retrieval-Augmented Generation) pipelines, predictive analytics, and natural language processing built into your web and mobile applications.',
+              ),
+            ]),
+            div(classes: 'mockup-tilt-wrapper', [
+              div(classes: 'mockup-card ai-mockup', [
+                div(classes: 'mockup-header', [
+                  span(classes: 'dot', []),
+                  span(classes: 'dot', []),
+                  span(classes: 'dot', []),
+                  span(classes: 'mockup-title', [Component.text('Agent.py')]),
+                ]),
+                div(classes: 'mockup-code', [
+                  span(classes: 'code-keyword', [Component.text('import ')]),
+                  span(classes: 'code-name', [Component.text('google.generativeai ')]),
+                  span(classes: 'code-keyword', [Component.text('as ')]),
+                  span(classes: 'code-name', [Component.text('genai')]),
+                  br(),
+                  br(),
+                  span(classes: 'code-comment', [Component.text('# Initialize Gemini Agent')]),
+                  br(),
+                  Component.text('model = genai.GenerativeModel('),
+                  br(),
+                  RawText('&nbsp;&nbsp;'),
+                  span(classes: 'code-string', [Component.text('"gemini-2.5-flash"')]),
+                  br(),
+                  Component.text(')'),
+                  br(),
+                  Component.text('response = model.generate_content('),
+                  br(),
+                  RawText('&nbsp;&nbsp;'),
+                  span(classes: 'code-string', [Component.text('"Analyze network state..."')]),
+                  br(),
+                  Component.text(')'),
+                ]),
+              ]),
+            ]),
+          ]),
         ]),
       ]),
     ]);

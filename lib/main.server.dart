@@ -116,11 +116,11 @@ void main() {
         link(rel: 'preconnect', href: 'https://fonts.gstatic.com', attributes: {'crossorigin': 'anonymous'}),
         link(
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=Syne:wght@700;800&family=Bricolage+Grotesque:wght@700;800&display=swap',
         ),
 
         // Styles
-        link(rel: 'stylesheet', href: '/style.css'),
+        link(rel: 'stylesheet', href: '/style.css?v=5'),
         Component.element(tag: 'style', children: [
           Component.text(
             'body.js-ready .reveal { opacity: 0; transform: translateY(40px) scale(0.98); filter: blur(5px); } '
@@ -138,7 +138,7 @@ void main() {
         // Scripts
         script(src: 'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js', defer: true),
         script(src: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', defer: true),
-        script(src: '/script.js', defer: true),
+        script(src: '/script.js?v=5', defer: true),
       ],
       body: const App(),
     ),

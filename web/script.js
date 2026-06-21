@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('js-ready');
 
   // Initialize Lucide Icons
-  if (typeof lucide !== 'undefined') {
+  if (typeof lucide !== 'undefined' && document.querySelector('i[data-lucide]')) {
     lucide.createIcons();
   }
 
@@ -17,21 +17,48 @@ document.addEventListener('DOMContentLoaded', () => {
   initTestimonialDeck();
   initContactForm();
   initLiveStatsFluke();
+  initTypingAnimation();
 
-  // Initialize blob and re-run observer AFTER Jaspr hydration settles.
-  // Jaspr's ClientApp.runApp() replaces DOM nodes ~300ms after DOMContentLoaded,
-  // which orphans any canvas appended before hydration. We wait for it to finish.
-  setTimeout(() => {
-    // Re-init blob fresh after hydration (container is now stable)
-    initThreeJSBlob();
+  // Create a MutationObserver to automatically keep the Three.js canvas
+  // and Lucide Icons intact even when Jaspr client-side hydration replaces
+  // DOM nodes (preventing any race conditions).
+  const hydrationObserver = new MutationObserver(() => {
+    // 1. Re-init Three.js blob if container exists but is empty/missing its canvas
+    const container = document.getElementById('blob-canvas-container');
+    if (container && !container.querySelector('canvas')) {
+      initThreeJSBlob();
+      initScrollObserver(); // Re-run scroll observer to catch any newly attached elements
+    }
 
-    // Re-run scroll observer to catch any newly attached elements
-    initScrollObserver();
-
-    if (typeof lucide !== 'undefined') {
+    // 2. Re-render Lucide icons if any unprocessed i[data-lucide] tags exist
+    if (typeof lucide !== 'undefined' && document.querySelector('i[data-lucide]')) {
       lucide.createIcons();
     }
-  }, 400);
+
+    // 3. Re-init typing animation if the container has been replaced (lacks the active attribute)
+    const typedText = document.querySelector('.typed-text');
+    if (typedText && !typedText.hasAttribute('data-typing-active')) {
+      initTypingAnimation();
+    }
+  });
+
+  hydrationObserver.observe(document.body, { childList: true, subtree: true });
+
+  // Fallback timeout in case no mutations occur but page hydration finished
+  setTimeout(() => {
+    const container = document.getElementById('blob-canvas-container');
+    if (container && !container.querySelector('canvas')) {
+      initThreeJSBlob();
+      initScrollObserver();
+    }
+    if (typeof lucide !== 'undefined' && document.querySelector('i[data-lucide]')) {
+      lucide.createIcons();
+    }
+    const typedText = document.querySelector('.typed-text');
+    if (typedText && !typedText.hasAttribute('data-typing-active')) {
+      initTypingAnimation();
+    }
+  }, 500);
 });
 
 
@@ -79,17 +106,31 @@ function initStarryBackground() {
   const canvas = document.getElementById('stars-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  
+
   let stars = [];
-  const maxStars = 80;
+  const maxStars = 100; // More quantity for a rich backdrop
+
+  // Color palette: purple, violet, cyan, white-blue tones
+  const starColors = [
+    [139, 92, 246],   // purple (primary)
+    [99, 102, 241],   // indigo
+    [167, 139, 250],  // violet light
+    [255, 255, 255],  // pure white
+  ];
 
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
-  
+
   resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    // Re-clamp existing stars to new dimensions
+    stars.forEach(s => {
+      s.x = Math.random() * canvas.width;
+    });
+  });
 
   class Star {
     constructor() {
@@ -98,38 +139,79 @@ function initStarryBackground() {
 
     reset(initial = false) {
       this.x = Math.random() * canvas.width;
-      this.y = initial ? Math.random() * canvas.height : canvas.height + 10;
-      this.size = Math.random() * 1.5 + 0.5;
-      this.vy = -(Math.random() * 0.3 + 0.1); // Slow rise speed
-      this.alpha = initial ? Math.random() : 0;
-      this.fadeInSpeed = Math.random() * 0.02 + 0.005;
-      this.fadeOutBound = Math.random() * 0.5 + 0.4;
-      this.isFadingIn = true;
+
+      // On initial load, distribute across full screen height so
+      // particles are visible immediately without waiting for them to rise.
+      // On recycle, spawn at the bottom 10% to keep the upward flow going.
+      if (initial) {
+        this.y = Math.random() * canvas.height;
+      } else {
+        // Spawn in the bottom quarter so they rise through the screen
+        this.y = canvas.height * 0.75 + Math.random() * (canvas.height * 0.35);
+      }
+
+      // Size: mix of tiny twinkles and slightly larger points (sharp & non-pixelated)
+      const sizeRoll = Math.random();
+      if (sizeRoll > 0.95) {
+        this.size = Math.random() * 0.3 + 0.9; // large: 0.9–1.2px
+        this.glowRadius = this.size * 2;
+      } else if (sizeRoll > 0.80) {
+        this.size = Math.random() * 0.3 + 0.6; // medium: 0.6–0.9px
+        this.glowRadius = this.size * 1.5;
+      } else {
+        this.size = Math.random() * 0.3 + 0.3; // small: 0.3–0.6px (very sharp points)
+        this.glowRadius = 0; // No glow for smallest to keep them crisp
+      }
+
+      // Pick a random color from palette
+      this.color = starColors[Math.floor(Math.random() * starColors.length)];
+
+      // Rise speed — larger particles move faster for parallax depth feel
+      this.vy = -(Math.random() * 0.45 + 0.08) * (this.size / 1.5);
+
+      // Opacity
+      this.alpha = initial ? Math.random() * 0.5 + 0.1 : 0;
+      this.maxAlpha = Math.random() * 0.75 + 0.25; // 0.25–1.0
+      this.fadeInSpeed = Math.random() * 0.025 + 0.008;
+      this.isFadingIn = !initial; // Initial stars start visible
     }
 
     update() {
       this.y += this.vy;
-      
+
       if (this.isFadingIn) {
         this.alpha += this.fadeInSpeed;
-        if (this.alpha >= this.fadeOutBound) {
+        if (this.alpha >= this.maxAlpha) {
+          this.alpha = this.maxAlpha;
           this.isFadingIn = false;
         }
       } else {
-        this.alpha -= 0.002; // Very slow fade out
+        // Very slow fade out — only after reaching the top 10% of screen
+        if (this.y < canvas.height * 0.1) {
+          this.alpha -= 0.004;
+        }
       }
 
-      // Recycle stars if they drift off screen or fade out
-      if (this.y < -10 || this.alpha <= 0) {
-        this.reset();
+      // Recycle when off-screen or fully faded
+      if (this.y < -this.size * 2 || this.alpha <= 0) {
+        this.reset(false);
       }
     }
 
     draw() {
+      const [r, g, b] = this.color;
+
+      ctx.save();
+      if (this.glowRadius > 0) {
+        ctx.shadowBlur = this.glowRadius;
+        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${this.alpha * 0.8})`;
+      }
+
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(139, 92, 246, ${this.alpha})`; // Purple glowing stars
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${this.alpha})`;
       ctx.fill();
+      ctx.restore();
     }
   }
 
@@ -150,6 +232,8 @@ function initStarryBackground() {
   animate();
 }
 
+
+
 /* ==========================================================================
    WebGL Three.js Morphing 3D Blob with Custom Shaders (Reference 1)
    ========================================================================== */
@@ -162,7 +246,7 @@ function initThreeJSBlob() {
 
   // Scene setup
   const scene = new THREE.Scene();
-  
+
   // Camera - Handle initial 0x0 size to prevent NaN aspect ratio crash
   let aspect = container.clientWidth / container.clientHeight;
   if (isNaN(aspect) || !isFinite(aspect) || aspect === 0) {
@@ -192,7 +276,7 @@ function initThreeJSBlob() {
 
   // Track Mouse movement for interaction
   let mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
-  
+
   window.addEventListener('mousemove', (e) => {
     // Normalise mouse coords between -1 and 1
     mouse.targetX = (e.clientX / window.innerWidth) * 2 - 1;
@@ -433,7 +517,7 @@ function initScrollObserver() {
       const rect = card.getBoundingClientRect();
       const x = e.clientX - rect.left; // x coordinate within component
       const y = e.clientY - rect.top;  // y coordinate within component
-      
+
       // Calculate rotation based on cursor position relative to card center
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
@@ -465,9 +549,9 @@ function initTestimonialDeck() {
     cards.forEach((card, idx) => {
       // Clean up previous classes
       card.classList.remove('active', 'next', 'last', 'swipe-out');
-      
+
       let relativeIndex = (idx - activeIndex + cards.length) % cards.length;
-      
+
       if (relativeIndex === 0) {
         card.classList.add('active');
       } else if (relativeIndex === 1) {
@@ -485,7 +569,7 @@ function initTestimonialDeck() {
     nextBtn.addEventListener('click', () => {
       const currentCard = cards[activeIndex];
       currentCard.classList.add('swipe-out');
-      
+
       // Wait for swipe transition to finish before wrapping index
       setTimeout(() => {
         activeIndex = (activeIndex + 1) % cards.length;
@@ -516,7 +600,7 @@ function initLiveStatsFluke() {
     const base = 96.0;
     const variation = (Math.random() * 0.6 - 0.3).toFixed(1);
     const resolvedRate = (parseFloat(base) + parseFloat(variation)).toFixed(1);
-    
+
     successRateText.textContent = `${resolvedRate}%`;
     if (progressBarFill) {
       progressBarFill.style.width = `${resolvedRate}%`;
@@ -565,32 +649,104 @@ function initContactForm() {
         Message: message
       })
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success === 'true' || data.success === true) {
-        form.style.transition = 'opacity 0.4s ease';
-        form.style.opacity = '0';
-        setTimeout(() => {
-          form.style.display = 'none';
-          successBox.classList.add('active');
-        }, 400);
-      } else {
-        alert('Something went wrong. Please try again.');
+      .then(response => response.json())
+      .then(data => {
+        if (data.success === 'true' || data.success === true) {
+          form.style.transition = 'opacity 0.4s ease';
+          form.style.opacity = '0';
+          setTimeout(() => {
+            form.style.display = 'none';
+            successBox.classList.add('active');
+          }, 400);
+        } else {
+          alert('Something went wrong. Please try again.');
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error submitting form:', error);
+        alert('Failed to send message. Please check your connection and try again.');
         btn.disabled = false;
         btn.innerHTML = originalText;
         if (typeof lucide !== 'undefined') {
           lucide.createIcons();
         }
-      }
-    })
-    .catch(error => {
-      console.error('Error submitting form:', error);
-      alert('Failed to send message. Please check your connection and try again.');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-      }
-    });
+      });
   });
+}
+
+let typingTimeout = null;
+
+function initTypingAnimation() {
+  const typedSpan = document.querySelector('.typed-text');
+  if (!typedSpan) return;
+  
+  // Set attribute to prevent multiple observer initializations
+  typedSpan.setAttribute('data-typing-active', 'true');
+  const cursorSpan = document.querySelector('.typed-cursor');
+
+  // Clear any existing typing animation loop
+  if (typingTimeout) {
+    clearTimeout(typingTimeout);
+    typingTimeout = null;
+  }
+
+  // Define words and cycle colors strictly between purple (#a855f7) and blue (#0ea5e9)
+  const words = [
+    { text: "Scalable", color: "#a855f7" },      // Purple
+    { text: "Intelligent", color: "#0ea5e9" },  // Blue
+    { text: "Future-Proof", color: "#a855f7" }, // Purple
+    { text: "Resilient", color: "#0ea5e9" }     // Blue
+  ];
+  let wordIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+
+  // Set initial color
+  typedSpan.style.color = words[wordIndex].color;
+  if (cursorSpan) {
+    cursorSpan.style.color = words[wordIndex].color;
+  }
+
+  function type() {
+    // If the element is no longer in the DOM, stop the animation loop
+    if (!document.body.contains(typedSpan)) {
+      return;
+    }
+
+    const currentWord = words[wordIndex];
+
+    // Set colors dynamically
+    typedSpan.style.color = currentWord.color;
+    if (cursorSpan) {
+      cursorSpan.style.color = currentWord.color;
+    }
+
+    if (isDeleting) {
+      typedSpan.textContent = currentWord.text.substring(0, charIndex - 1);
+      charIndex--;
+    } else {
+      typedSpan.textContent = currentWord.text.substring(0, charIndex + 1);
+      charIndex++;
+    }
+
+    let typeSpeed = isDeleting ? 30 : 60; // Faster delete, smooth typing
+
+    if (!isDeleting && charIndex === currentWord.text.length) {
+      typeSpeed = 2200; // Pause at end of word
+      isDeleting = true;
+    } else if (isDeleting && charIndex === 0) {
+      isDeleting = false;
+      wordIndex = (wordIndex + 1) % words.length;
+      typeSpeed = 400; // Pause before typing next word
+    }
+
+    typingTimeout = setTimeout(type, typeSpeed);
+  }
+
+  type();
 }
