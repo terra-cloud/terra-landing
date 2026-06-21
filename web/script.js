@@ -3,6 +3,9 @@
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Mark body as JS-ready so reveal animations activate
+  document.body.classList.add('js-ready');
+
   // Initialize Lucide Icons
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
@@ -10,12 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initMobileMenu();
   initStarryBackground();
-  initThreeJSBlob();
   initScrollObserver();
   initTestimonialDeck();
   initContactForm();
   initLiveStatsFluke();
+
+  // Initialize blob and re-run observer AFTER Jaspr hydration settles.
+  // Jaspr's ClientApp.runApp() replaces DOM nodes ~300ms after DOMContentLoaded,
+  // which orphans any canvas appended before hydration. We wait for it to finish.
+  setTimeout(() => {
+    // Re-init blob fresh after hydration (container is now stable)
+    initThreeJSBlob();
+
+    // Re-run scroll observer to catch any newly attached elements
+    initScrollObserver();
+
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  }, 400);
 });
+
 
 /* ==========================================================================
    Mobile Navigation Menu
@@ -138,6 +156,9 @@ function initStarryBackground() {
 function initThreeJSBlob() {
   const container = document.getElementById('blob-canvas-container');
   if (!container) return;
+
+  // Clear any existing canvas (e.g., from a previous init before hydration)
+  container.innerHTML = '';
 
   // Scene setup
   const scene = new THREE.Scene();
@@ -379,14 +400,13 @@ function initThreeJSBlob() {
    Intersection Observer (Scroll-Reveal & 3D Card Tilts)
    ========================================================================== */
 function initScrollObserver() {
-  const reveals = document.querySelectorAll('.reveal');
-  const ctaCard = document.querySelector('.cta-card');
-  const serviceCards = document.querySelectorAll('.service-card');
+  const reveals = document.querySelectorAll('.reveal:not(.visible)');
+  const ctaCard = document.querySelector('.cta-card:not(.visible)');
 
   const observerOptions = {
     root: null,
-    rootMargin: '0px',
-    threshold: 0.15
+    rootMargin: '200px 0px',  // generous margin so near-viewport elements trigger
+    threshold: 0.05
   };
 
   const observer = new IntersectionObserver((entries) => {
@@ -402,6 +422,7 @@ function initScrollObserver() {
   if (ctaCard) observer.observe(ctaCard);
 
   // JavaScript 3D Tilt Effect on mouse movement over Service Cards
+  const serviceCards = document.querySelectorAll('.service-card');
   serviceCards.forEach(card => {
     const wrapper = card.querySelector('.mockup-tilt-wrapper');
     if (!wrapper) return;

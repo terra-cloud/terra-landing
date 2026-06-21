@@ -1,0 +1,38 @@
+name: Deploy Jaspr Site to Firebase Hosting
+
+on:
+  push:
+    branches: [ "main" ] # Triggers the build when you push to main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install Dependencies
+        run: dart pub get
+
+      - name: Install Jaspr CLI
+        run: dart pub global activate jaspr_cli
+
+      - name: Build Static Site
+        run: |
+          # Ensuring dart global binaries are in the path
+          export PATH="$PATH":"$HOME/.pub-cache/bin"
+          jaspr build --mode static
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TERRA_LANDING_PAGE_7BAC2 }}
+          channelId: live
+          projectId: terra-landing-page-7bac2

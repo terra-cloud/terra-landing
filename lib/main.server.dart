@@ -38,7 +38,7 @@ void main() {
               'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap',
         ),
         link(rel: 'stylesheet', href: '/style.css'),
-        Component.element(tag: 'style', children: [Component.text('.reveal { opacity: 0; }')]),
+        Component.element(tag: 'style', children: [Component.text('body.js-ready .reveal { opacity: 0; transform: translateY(40px) scale(0.98); filter: blur(5px); } body.js-ready .reveal.visible { opacity: 1; transform: none; filter: none; }')]),
         script(src: 'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js', defer: true),
         script(src: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', defer: true),
         script(src: '/script.js', defer: true),
