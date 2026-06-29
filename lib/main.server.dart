@@ -12,7 +12,7 @@ import 'app.dart';
 // This file is generated automatically by Jaspr, do not remove or edit.
 import 'main.server.options.dart';
 
-const _siteUrl = 'https://terra-landing-page-7bac2.web.app';
+const _siteUrl = 'https://terra-tech.xyz';
 const _siteName = 'Terra.Ph Technologies Inc.';
 const _title = 'Terra.Ph Technologies Inc. | Next-Gen Software Development';
 const _description =
@@ -40,7 +40,11 @@ const _jsonLd = '''
     "@type": "PostalAddress",
     "addressCountry": "PH"
   },
-  "sameAs": [],
+  "sameAs": [
+    "https://www.linkedin.com/company/terra-ph-technologies-inc/",
+    "https://x.com/TerraServicesPH",
+    "https://www.facebook.com/TerraSVCPH"
+  ],
   "legalName": "Terra.Ph Technologies Inc.",
   "identifier": {
     "@type": "PropertyValue",
@@ -107,6 +111,7 @@ void main() {
         // Favicon & icons
         link(rel: 'icon', type: 'image/png', href: '/logo.png'),
         link(rel: 'apple-touch-icon', href: '/logo.png'),
+        link(rel: 'manifest', href: '/manifest.json'),
 
         // Canonical URL
         link(rel: 'canonical', href: _siteUrl),
